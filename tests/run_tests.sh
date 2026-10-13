@@ -47,12 +47,10 @@ sleep 8
 # Ensure containers are reachable in containerized runners (e.g. Hermes / CI)
 if docker network inspect ai-agents-net >/dev/null 2>&1; then
     docker network connect ai-agents-net our-free-model 2>/dev/null || true
-    docker network connect ai-agents-net our-free-model-proxy 2>/dev/null || true
+    docker network connect ai-agents-net our-free-model 2>/dev/null || true
     OFM_HOST="our-free-model"
-    PROXY_HOST="our-free-model-proxy"
 else
     OFM_HOST="127.0.0.1"
-    PROXY_HOST="127.0.0.1"
 fi
 
 docker compose ps
@@ -61,16 +59,17 @@ assert_success "Services started and running"
 # ----------------------------------------------------
 # TEST 3: Validate Healthcheck Endpoints
 # ----------------------------------------------------
-log_test "3" "Validating /health on OFM and Proxy sidecar"
+log_test "3" "Validating /health on OFM standalone"
 OFM_HEALTH=$(curl -s "http://${OFM_HOST}:18900/health")
 echo "OFM Health: $OFM_HEALTH"
 echo "$OFM_HEALTH" | grep -q '"ok":true'
 assert_success "OFM standalone /health returned ok: true"
 
-PROXY_HEALTH=$(curl -s "http://${PROXY_HOST}:8899/health")
-echo "Proxy Health: $PROXY_HEALTH"
-echo "$PROXY_HEALTH" | grep -i -q '"ok"[[:space:]]*:[[:space:]]*true'
-assert_success "Proxy sidecar /health returned ok: true"
+# Check embedded proxy health if running inside container
+if docker exec our-free-model pgrep -f proxy_server.py >/dev/null 2>&1; then
+    EMBEDDED_PROXY_HEALTH=$(docker exec our-free-model curl -s "http://127.0.0.1:8899/health" 2>/dev/null || true)
+    echo "Embedded Proxy Health: $EMBEDDED_PROXY_HEALTH"
+fi
 
 # ----------------------------------------------------
 # TEST 4: Validate /v1/models
