@@ -36,6 +36,7 @@ DATA_DIR = os.getenv("PROXY_DATA_DIR", "/data")
 MODE = os.getenv("PROXY_MODE", "disabled").lower().strip()  # disabled | single | pool
 SINGLE_URL = os.getenv("PROXY_SINGLE_URL", "").strip()
 POOL_URLS_RAW = os.getenv("PROXY_POOL_URLS", "").strip()
+PROXY_SOURCE_URLS = os.getenv("PROXY_SOURCE_URLS", "").strip()
 CHECK_INTERVAL = int(os.getenv("PROXY_CHECK_INTERVAL", "300"))
 CHECK_TIMEOUT = int(os.getenv("PROXY_CHECK_TIMEOUT", "8"))
 COOLDOWN_SECONDS = int(os.getenv("PROXY_COOLDOWN_SECONDS", "300"))
@@ -92,9 +93,55 @@ class SmartProxyPool:
             except Exception as e:
                 logger.warning(f"Failed to read {self.proxy_file}: {e}")
 
+        # 3. From Remote Sources (URLs txt / json)
+        if PROXY_SOURCE_URLS:
+            try:
+                remote_fetched = self._fetch_remote_sources()
+                proxies.update(remote_fetched)
+            except Exception as e:
+                logger.warning(f"Failed fetching remote proxy sources: {e}")
+
         self.all_proxies = sorted(list(proxies))
         self.active_proxies = list(self.all_proxies)
         logger.info(f"Loaded {len(self.all_proxies)} total proxies into pool.")
+
+    def _fetch_remote_sources(self) -> Set[str]:
+        """Fetch remote proxy lists from TXT and JSON URLs (like yt-dlp-server)."""
+        discovered = set()
+        sources = [u.strip() for u in PROXY_SOURCE_URLS.split(",") if u.strip()]
+        for url in sources:
+            try:
+                logger.info(f"Fetching proxy list from {url}...")
+                req = urllib.request.Request(url, headers={"User-Agent": "egress-proxy-fetcher/1.0"})
+                with urllib.request.urlopen(req, timeout=12) as resp:
+                    raw = resp.read().decode("utf-8", errors="ignore").strip()
+                    if raw.startswith("[") or raw.startswith("{"):
+                        data = json.loads(raw)
+                        items = data if isinstance(data, list) else data.get("proxies", [])
+                        for item in items:
+                            if isinstance(item, dict) and item.get("proxy"):
+                                p = item["proxy"].strip()
+                                if not p.startswith("http://") and not p.startswith("socks5://"):
+                                    p = f"http://{p}"
+                                discovered.add(p)
+                            elif isinstance(item, str) and item.strip():
+                                p = item.strip()
+                                if not p.startswith("http://") and not p.startswith("socks5://"):
+                                    p = f"http://{p}"
+                                discovered.add(p)
+                    else:
+                        for line in raw.splitlines():
+                            line = line.strip()
+                            if not line or line.startswith("#"):
+                                continue
+                            match = re.search(r"((?:https?|socks5)://)?([0-9]{1,3}(?:\.[0-9]{1,3}){3}:[0-9]{2,5})", line)
+                            if match:
+                                scheme = match.group(1) or "http://"
+                                discovered.add(f"{scheme}{match.group(2)}")
+                logger.info(f"Discovered {len(discovered)} proxies from remote sources.")
+            except Exception as e:
+                logger.warning(f"Failed downloading proxy source from {url}: {e}")
+        return discovered
 
     def save_state(self):
         try:
