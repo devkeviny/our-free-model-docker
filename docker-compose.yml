@@ -1,0 +1,65 @@
+services:
+  ofm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UPSTREAM_REPO: ${UPSTREAM_REPO:-https://github.com/Ebony-Vinyl/dsh-our-free-model.git}
+        UPSTREAM_REF: ${UPSTREAM_REF:-main}
+        CACHEBUST: ${CACHEBUST:-1}
+    image: our-free-model-docker:latest
+    container_name: our-free-model
+    restart: unless-stopped
+    ports:
+      - "${PORT:-18900}:18900"
+    environment:
+      PORT: 18900
+      INTERNAL_PORT: 18901
+      OFM_HOME: /data
+      OFM_PROBE: ${OFM_PROBE:-false}
+      OFM_NO_REFRESH: ${OFM_NO_REFRESH:-false}
+      EGRESS_PROXY_URL: ${EGRESS_PROXY_URL:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      ALL_PROXY: ${ALL_PROXY:-}
+      NO_PROXY: 127.0.0.1,localhost,proxy
+    volumes:
+      - ofm_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:18900/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    image: our-free-model-proxy:latest
+    container_name: our-free-model-proxy
+    restart: unless-stopped
+    ports:
+      - "${PROXY_EXPOSE_PORT:-8899}:8899"
+    environment:
+      PROXY_MODE: ${PROXY_MODE:-disabled}
+      PROXY_SINGLE_URL: ${PROXY_SINGLE_URL:-}
+      PROXY_POOL_URLS: ${PROXY_POOL_URLS:-}
+      PROXY_CHECK_INTERVAL: ${PROXY_CHECK_INTERVAL:-300}
+      PROXY_CHECK_TIMEOUT: ${PROXY_CHECK_TIMEOUT:-8}
+      PROXY_COOLDOWN_SECONDS: ${PROXY_COOLDOWN_SECONDS:-300}
+      PROXY_ALLOW_DIRECT_FALLBACK: ${PROXY_ALLOW_DIRECT_FALLBACK:-true}
+    volumes:
+      - ofm_proxy_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8899/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  ofm_data:
+    name: ofm_data
+  ofm_proxy_data:
+    name: ofm_proxy_data

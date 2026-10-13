@@ -1,0 +1,12 @@
+.env
+.env.local
+data/
+ofm_data/
+ofm_proxy_data/
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.DS_Store
+.deployed_sha
