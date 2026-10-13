@@ -38,7 +38,13 @@ if [ -n "$EGRESS_PROXY_URL" ]; then
     echo "[init] Configuring egress proxy: $EGRESS_PROXY_URL"
     export HTTP_PROXY="$EGRESS_PROXY_URL"
     export HTTPS_PROXY="$EGRESS_PROXY_URL"
+    export http_proxy="$EGRESS_PROXY_URL"
+    export https_proxy="$EGRESS_PROXY_URL"
     export ALL_PROXY="$EGRESS_PROXY_URL"
+    export all_proxy="$EGRESS_PROXY_URL"
+    export NO_PROXY="127.0.0.1,localhost,proxy"
+    # Ensure Node 22 native fetch() respects env proxies
+    export NODE_OPTIONS="${NODE_OPTIONS:-} --use-env-proxy"
 fi
 
 # Build CLI arguments
