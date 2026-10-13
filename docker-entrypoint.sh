@@ -33,10 +33,10 @@ if [ -f "$LOCK_FILE" ]; then
     rm -f "$LOCK_FILE"
 fi
 
-# Start embedded egress proxy if requested (1-container architecture)
+# Start embedded egress proxy (1-container architecture)
 PROXY_PID=""
 PROXY_MODE="${PROXY_MODE:-disabled}"
-if [ "$PROXY_MODE" != "disabled" ] && [ -f "/app/proxy_server.py" ]; then
+if [ -f "/app/proxy_server.py" ]; then
     echo "[init] Starting embedded egress proxy server (mode: $PROXY_MODE) on 127.0.0.1:8899..."
     python3 /app/proxy_server.py &
     PROXY_PID=$!

@@ -49,8 +49,10 @@ if docker network inspect ai-agents-net >/dev/null 2>&1; then
     docker network connect ai-agents-net our-free-model 2>/dev/null || true
     docker network connect ai-agents-net our-free-model 2>/dev/null || true
     OFM_HOST="our-free-model"
+    PROXY_HOST="our-free-model"
 else
     OFM_HOST="127.0.0.1"
+    PROXY_HOST="127.0.0.1"
 fi
 
 docker compose ps
