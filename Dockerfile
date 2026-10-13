@@ -14,11 +14,12 @@ ENV NODE_ENV=production \
     INTERNAL_PORT=18901 \
     OFM_HOME=/data
 
-# Install git, curl, ca-certificates
+# Install git, curl, ca-certificates, python3 for embedded egress proxy
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     ca-certificates \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -33,8 +34,9 @@ RUN echo "Fetching upstream from ${UPSTREAM_REPO} at ref ${UPSTREAM_REF} (build 
     echo "Cloned commit: ${UPSTREAM_SHA}" && \
     echo "${UPSTREAM_SHA}" > /app/upstream_sha.txt
 
-# Copy our custom ingress bridge and entrypoint scripts
+# Copy our custom ingress bridge, proxy server, and entrypoint scripts
 COPY ingress.mjs /app/ingress.mjs
+COPY proxy/proxy_server.py /app/proxy_server.py
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 

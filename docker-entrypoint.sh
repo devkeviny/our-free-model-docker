@@ -33,9 +33,27 @@ if [ -f "$LOCK_FILE" ]; then
     rm -f "$LOCK_FILE"
 fi
 
+# Start embedded egress proxy if requested (1-container architecture)
+PROXY_PID=""
+PROXY_MODE="${PROXY_MODE:-disabled}"
+if [ "$PROXY_MODE" != "disabled" ] && [ -f "/app/proxy_server.py" ]; then
+    echo "[init] Starting embedded egress proxy server (mode: $PROXY_MODE) on 127.0.0.1:8899..."
+    python3 /app/proxy_server.py &
+    PROXY_PID=$!
+    # Wait up to 10s for proxy health
+    for i in $(seq 1 10); do
+        if curl -s -f "http://127.0.0.1:8899/health" >/dev/null 2>&1; then
+            echo "[init] Embedded egress proxy is healthy on 127.0.0.1:8899."
+            break
+        fi
+        sleep 1
+    done
+    export EGRESS_PROXY_URL="http://127.0.0.1:8899"
+fi
+
 # Configure proxy environment if provided
 if [ -n "$EGRESS_PROXY_URL" ]; then
-    echo "[init] Configuring egress proxy: $EGRESS_PROXY_URL"
+    echo "[init] Configuring egress proxy environment: $EGRESS_PROXY_URL"
     export HTTP_PROXY="$EGRESS_PROXY_URL"
     export HTTPS_PROXY="$EGRESS_PROXY_URL"
     export http_proxy="$EGRESS_PROXY_URL"
@@ -68,6 +86,9 @@ OFM_PID=$!
 # Trap signals for graceful shutdown
 cleanup() {
     echo "[shutdown] Received signal, stopping processes..."
+    if [ -n "$PROXY_PID" ] && kill -0 "$PROXY_PID" 2>/dev/null; then
+        kill -TERM "$PROXY_PID" 2>/dev/null || true
+    fi
     if [ -n "$INGRESS_PID" ] && kill -0 "$INGRESS_PID" 2>/dev/null; then
         kill -TERM "$INGRESS_PID" 2>/dev/null || true
     fi
