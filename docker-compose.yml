@@ -34,6 +34,16 @@ services:
       NO_PROXY: 127.0.0.1,localhost,proxy
     volumes:
       - ofm_data:/data
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ofm.rule=Host(`ofm.estudiopleiades.qzz.io`)"
+      - "traefik.http.routers.ofm.entrypoints=https"
+      - "traefik.http.routers.ofm.tls=true"
+      - "traefik.http.routers.ofm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ofm.loadbalancer.server.port=18900"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:18900/health || exit 1"]
       interval: 20s
@@ -44,3 +54,7 @@ services:
 volumes:
   ofm_data:
     name: ofm_data
+
+networks:
+  coolify:
+    external: true
