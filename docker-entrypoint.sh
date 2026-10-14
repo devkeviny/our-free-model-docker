@@ -36,7 +36,7 @@ fi
 # Start embedded egress proxy (1-container architecture)
 PROXY_PID=""
 PROXY_MODE="${PROXY_MODE:-disabled}"
-if [ -f "/app/proxy_server.py" ]; then
+if [ "$PROXY_MODE" != "disabled" ] && [ -f "/app/proxy_server.py" ]; then
     echo "[init] Starting embedded egress proxy server (mode: $PROXY_MODE) on 127.0.0.1:8899..."
     python3 /app/proxy_server.py &
     PROXY_PID=$!
@@ -51,8 +51,8 @@ if [ -f "/app/proxy_server.py" ]; then
     export EGRESS_PROXY_URL="http://127.0.0.1:8899"
 fi
 
-# Configure proxy environment if provided
-if [ -n "$EGRESS_PROXY_URL" ]; then
+# Configure proxy environment if provided and mode is not disabled
+if [ "$PROXY_MODE" != "disabled" ] && [ -n "$EGRESS_PROXY_URL" ]; then
     echo "[init] Configuring egress proxy environment: $EGRESS_PROXY_URL"
     export HTTP_PROXY="$EGRESS_PROXY_URL"
     export HTTPS_PROXY="$EGRESS_PROXY_URL"
