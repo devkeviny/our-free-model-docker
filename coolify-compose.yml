@@ -1,0 +1,40 @@
+services:
+  ofm:
+    # Cutover phase 1: reuse the EXACT image already built and running on this
+    # daemon (our-free-model-docker:latest, id 920f59ba4bcf, upstream pinned
+    # 8c810d103437c42148b4266231efb38d4eefe982). No rebuild, no upstream change.
+    # Phase 2 (optional, later): switch to a git-based build from
+    # devkeviny/our-free-model-docker once repo access/deploy key is configured.
+    image: our-free-model-docker:latest
+    container_name: our-free-model
+    restart: unless-stopped
+    environment:
+      PORT: 18900
+      INTERNAL_PORT: 18901
+      OFM_HOME: /data
+      OFM_PROBE: ${OFM_PROBE:-false}
+      OFM_NO_REFRESH: ${OFM_NO_REFRESH:-false}
+      PROXY_MODE: ${PROXY_MODE:-disabled}
+      NO_PROXY: 127.0.0.1,localhost,proxy
+    volumes:
+      # EXTERNAL named volume: the existing ofm_data with settings/catalog.
+      # `external: true` prevents Coolify/compose from ever recreating it.
+      # NEVER run `docker compose down -v` on this service.
+      - ofm_data:/data
+    networks:
+      - coolify
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:18900/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  ofm_data:
+    name: ofm_data
+    external: true
+
+networks:
+  coolify:
+    external: true
