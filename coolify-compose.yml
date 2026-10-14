@@ -23,6 +23,15 @@ services:
       - ofm_data:/data
     networks:
       - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ofm-http.rule=Host(`ofm.estudiopleiades.qzz.io`)"
+      - "traefik.http.routers.ofm-http.entryPoints=http"
+      - "traefik.http.routers.ofm-https.rule=Host(`ofm.estudiopleiades.qzz.io`)"
+      - "traefik.http.routers.ofm-https.entryPoints=https"
+      - "traefik.http.routers.ofm-https.tls=true"
+      - "traefik.http.routers.ofm-https.tls.certResolver=letsencrypt"
+      - "traefik.http.services.ofm.loadbalancer.server.port=18900"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:18900/health || exit 1"]
       interval: 20s
