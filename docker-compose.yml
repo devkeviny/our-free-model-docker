@@ -39,6 +39,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.ofm-http.rule=Host(`ofm.estudiopleiades.qzz.io`)"
       - "traefik.http.routers.ofm-http.entryPoints=http"
       - "traefik.http.routers.ofm-https.rule=Host(`ofm.estudiopleiades.qzz.io`)"
