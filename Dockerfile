@@ -40,6 +40,18 @@ COPY proxy/proxy_server.py /app/proxy_server.py
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
+# Bun is REQUIRED by the Our Free Model OpenCode free lane: upstream
+# src/egress.js routes opencode.ai/inference/* through Bun's fetch (the free
+# tier only answers Bun's client). Without it every free model fails with 502
+# ("OpenCode free inference requires a local Bun executable"). Installed via
+# the official script to /root/.bun and symlinked on PATH; findBunExecutable
+# checks ~/.bun/bin/bun and every PATH entry.
+RUN apt-get update && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && bun --version
+
 # Create persistent data volume directory
 RUN mkdir -p /data
 
